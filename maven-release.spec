@@ -7,7 +7,7 @@
 
 Name:           maven-release
 Version:        2.0
-Release:        3
+Release:        5
 Summary:        Release a project updating the POM and tagging in the SCM
 
 Group:          Development/Java

@@ -1,0 +1,35 @@
+--- A/maven-release-manager/pom.xml	2010-09-11 01:26:43.000000000 +0200
++++ B/maven-release-manager/pom.xml	2010-09-13 15:28:21.472805005 +0200
+@@ -186,17 +186,6 @@
+       <version>${scmVersion}</version>
+       <scope>test</scope>
+     </dependency>
+-    <dependency>
+-      <groupId>jmock</groupId>
+-      <artifactId>jmock</artifactId>
+-      <scope>test</scope>
+-    </dependency>
+-    <dependency>
+-      <groupId>jmock</groupId>
+-      <artifactId>jmock-cglib</artifactId>
+-      <version>1.0.1</version>
+-      <scope>test</scope>
+-    </dependency>
+   </dependencies>
+ 
+   <build>
+@@ -210,6 +199,14 @@
+         </configuration>
+       </plugin>
+       <plugin>
++        <groupId>org.apache.maven.plugins</groupId>
++        <artifactId>maven-compiler-plugin</artifactId>
++        <configuration>
++          <source>1.4</source>
++          <target>1.4</target>
++        </configuration>
++      </plugin>
++      <plugin>
+         <artifactId>maven-surefire-plugin</artifactId>
+         <configuration>
+           <argLine>-Xmx256m</argLine>

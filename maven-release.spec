@@ -1,104 +1,68 @@
-# maven-release parent pom version
-%global pversion 16
-# maven-release-manager jar version
-%global mjarver 2.0
-# maven-release-plugin jar version
-%global pjarver 2.0
-
+%{?_javapackages_macros:%_javapackages_macros}
 Name:           maven-release
-Version:        2.0
-Release:        5
+Version:        2.2.1
+Release:        9.1%{?dist}
 Summary:        Release a project updating the POM and tagging in the SCM
-
-Group:          Development/Java
 License:        ASL 2.0
 URL:            http://maven.apache.org/plugins/maven-release-plugin/
-# tar creation instructions
-# svn export http://svn.apache.org/repos/asf//maven/release/tags/maven-release-2.0 maven-release-2.0
-# tar cfJ maven-release-2.0.tar.xz maven-release-2.0 
-Source0:        maven-release-2.0.tar.xz
-Source1:        maven-release-jpp-depmap.xml
-# Remove jmock needed for tests and set source to 1.4 to support assert stmt
-Patch0:         001_mavenreleasemanager_fixbuild.patch
+Source0:        http://repo1.maven.org/maven2/org/apache/maven/release/%{name}/%{version}/%{name}-%{version}-source-release.zip
 # Remove deps needed for tests, till jmock gets packaged
-Patch1:         002_mavenreleaseplugin_skiptests.patch
+Patch1:         002-mavenrelease-fixbuild.patch
+Patch2:         003-fixing-migration-to-component-metadata.patch
+Patch3:         %{name}-ftbfs.patch
+
 BuildArch:      noarch
 
 BuildRequires:  java-devel
-BuildRequires:  jpackage-utils
-BuildRequires:  maven-scm >= 1.4-1
-BuildRequires:  maven-scm-test >= 1.4-1
-BuildRequires:  maven2
-BuildRequires:  maven2-common-poms >= 0:1.0-13
+BuildRequires:  maven-local
+BuildRequires:  maven-scm
 BuildRequires:  maven-antrun-plugin
-BuildRequires:  maven-jar-plugin
-BuildRequires:  maven-javadoc-plugin
 BuildRequires:  maven-source-plugin
-BuildRequires:  maven-compiler-plugin
-BuildRequires:  maven-install-plugin
 BuildRequires:  maven-plugin-plugin
-BuildRequires:  maven-resources-plugin
 BuildRequires:  maven-site-plugin
 BuildRequires:  maven-plugin-testing-harness
-BuildRequires:  plexus-maven-plugin
+BuildRequires:  plexus-containers-component-metadata
 BuildRequires:  plexus-utils
 BuildRequires:  maven-surefire-maven-plugin
+BuildRequires:  maven-enforcer-plugin
 BuildRequires:  jaxen
-
-Requires:       java 
-Requires:       jpackage-utils
-
-Requires(post):   jpackage-utils
-Requires(postun): jpackage-utils
-
 
 %description
 This plugin is used to release a project with Maven, saving a lot of 
 repetitive, manual work. Releasing a project is made in two steps: 
 prepare and perform.
 
-
 %package manager
 Summary:        Release a project updating the POM and tagging in the SCM
-Group:          Development/Java
-Requires:       %{name} = %{version}-%{release}
-Requires:       jpackage-utils
-BuildArch:      noarch
 
 %description manager
 This package contains %{name}-manager needed by %{name}-plugin.
 
-
 %package plugin
 Summary:        Release a project updating the POM and tagging in the SCM
-Group:          Development/Java
-Requires:       %{name}-manager = %{version}-%{release}
-Requires:       jpackage-utils
-BuildArch:      noarch
 
 %description plugin
 This plugin is used to release a project with Maven, saving a lot of
 repetitive, manual work. Releasing a project is made in two steps:
 prepare and perform.
 
-
 %package javadoc
-Summary:        Javadocs for %{name}
-Group:          Development/Java
-Requires:       %{name} = %{version}-%{release}
-Requires:       jpackage-utils
+Summary:        Javadoc for %{name}
+Provides:       %{name}-manager-javadoc = %{version}-%{release}
 Obsoletes:      %{name}-manager-javadoc <= 2.0-1
+Provides:       %{name}-plugin-javadoc = %{version}-%{release}
 Obsoletes:      %{name}-plugin-javadoc <= 2.0-1
-BuildArch:      noarch
 
 %description javadoc
 This package contains the API documentation for %{name}.
 
-
 %prep
 %setup -q -n %{name}-%{version}
-%patch0 -p1
+
 %patch1 -p1
+%patch2 -p1
+%patch3 -p1
+
 cat > README << EOT
 %{name}-%{version}
 
@@ -109,77 +73,97 @@ EOT
 
 
 %build
-export MAVEN_REPO_LOCAL=$(pwd)/.m2/repository
-mkdir -p $MAVEN_REPO_LOCAL
 
-mvn-jpp \
-  -e  \
-  -Dmaven.repo.local=$MAVEN_REPO_LOCAL \
-  -Dmaven2.jpp.depmap.file=%{SOURCE1} \
-  -Dmaven.test.skip=true \
-  install javadoc:aggregate
-
+%mvn_file :%{name}-manager %{name}-manager
+%mvn_file :%{name}-plugin %{name}-plugin
+%mvn_package :%{name}-manager manager
+%mvn_package :%{name}-plugin plugin
+# Skip tests because we don't have dependencies (jmock)
+%mvn_build -f
 
 %install
-rm -rf $RPM_BUILD_ROOT
-mkdir -p $RPM_BUILD_ROOT%{_javadir}
+%mvn_install
 
-# jars
-install -Dp -m 644 %{name}-manager/target/%{name}-manager-%{mjarver}.jar \
-  $RPM_BUILD_ROOT%{_javadir}//%{name}-manager.jar
+%files -f .mfiles
+%doc LICENSE NOTICE README
 
-install -Dp -m 644 %{name}-plugin/target/%{name}-plugin-%{pjarver}.jar \
-  $RPM_BUILD_ROOT%{_javadir}/%{name}-plugin.jar
+%files manager -f .mfiles-manager
+%doc LICENSE NOTICE
 
-# javadocs
-mkdir -p $RPM_BUILD_ROOT%{_javadocdir}/%{name}-%{version}
-cp -rp target/site/apidocs/  \
-  $RPM_BUILD_ROOT%{_javadocdir}/%{name}-%{version}
-(cd $RPM_BUILD_ROOT%{_javadocdir} && ln -sf %{name}-%{version} %{name})
+%files plugin -f .mfiles-plugin
+%doc LICENSE NOTICE
 
-# poms
-install -d -m 755 $RPM_BUILD_ROOT%{_datadir}/maven2/poms
-install -pm 644 pom.xml  \
-  $RPM_BUILD_ROOT%{_datadir}/maven2/poms/JPP-%{name}.pom
-install -pm 644 %{name}-manager/pom.xml  \
-  $RPM_BUILD_ROOT%{_datadir}/maven2/poms/JPP-%{name}-manager.pom
-install -pm 644 %{name}-plugin/pom.xml  \
-  $RPM_BUILD_ROOT%{_datadir}/maven2/poms/JPP-%{name}-plugin.pom
+%files javadoc -f .mfiles-javadoc
+%doc LICENSE NOTICE
 
-%add_to_maven_depmap org.apache.maven.release %{name} %{pversion} JPP %{name}
-%add_to_maven_depmap org.apache.maven.release %{name}-manager %{mjarver} JPP %{name}-manager
-%add_to_maven_depmap org.apache.maven.plugins %{name}-plugin %{pjarver} JPP %{name}-plugin
+%changelog
+* Mon Aug 12 2013 gil cattaneo <puntogil@libero.it> 2.2.1-9
+- fix rhbz#984875, rhbz#992200
+- fix some rpmlint problems
+- update to current packaging guidelines
 
-%files
-%defattr(-,root,root,-)
-%doc README
-%{_mavenpomdir}/JPP-%{name}.pom
-%{_mavendepmapfragdir}/*
+* Sat Aug 03 2013 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 2.2.1-8
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_20_Mass_Rebuild
 
+* Thu Feb 14 2013 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 2.2.1-7
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_19_Mass_Rebuild
 
-%files manager
-%defattr(-,root,root,-)
-%{_javadir}/*manager*
-%{_mavenpomdir}/JPP-%{name}-manager.pom
+* Wed Feb 06 2013 Java SIG <java-devel@lists.fedoraproject.org> - 2.2.1-6
+- Update for https://fedoraproject.org/wiki/Fedora_19_Maven_Rebuild
+- Replace maven BuildRequires with maven-local
 
+* Mon Sep 17 2012 Jaromir Capik <jcapik@redhat.com> - 2.2.1-5
+- Fixing incomplete migration to component metadata
 
-%files plugin
-%defattr(-,root,root,-)
-%{_javadir}/*plugin*
-%{_mavenpomdir}/JPP-%{name}-plugin.pom
+* Tue Aug  7 2012 Mikolaj Izdebski <mizdebsk@redhat.com> - 2.2.1-4
+- Remove BR: maven-scm-test
 
+* Thu Jul 19 2012 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 2.2.1-3
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_18_Mass_Rebuild
 
-%files javadoc
-%defattr(-,root,root,-)
-%{_javadocdir}/%{name}
-%{_javadocdir}/%{name}-%{version}
+* Fri Jan 13 2012 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 2.2.1-2
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_17_Mass_Rebuild
 
+* Tue Nov 29 2011 Alexander Kurtakov <akurtako@redhat.com> 2.2.1-1
+- Update to latest upstream release.
+- Adapt to current guidelines.
 
-%post
-%update_maven_depmap
+* Tue Jul 26 2011 Guido Grazioli <guido.grazioli@gmail.com> - 2.2-3
+- Reinclude maven-scm-test in BRs
 
+* Tue Jul 26 2011 Guido Grazioli <guido.grazioli@gmail.com> - 2.2-2
+- Import patch provided by Jaromír Cápík (#725088)
 
-%postun
-%update_maven_depmap
+* Mon Jul 18 2011 Guido Grazioli <guido.grazioli@gmail.com> - 2.2-1
+- Update to 2.2
+- Update to current guidelines
+- Build with maven 3
 
+* Tue Feb 08 2011 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 2.0-3
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_15_Mass_Rebuild
 
+* Mon Jan 3 2011 Alexander Kurtakov <akurtako@redhat.com> 2.0-2
+- Drop tomcat5 BRs.
+- Drop versioned jars.
+
+* Mon Sep 13 2010 Guido Grazioli <guido.grazioli@gmail.com> - 2.0-1
+- Update to upstream 2.0
+
+* Sat Sep 11 2010 Guido Grazioli <guido.grazioli@gmail.com> - 2.0-0.659858svn.4
+- Fix build requires
+- Use javadoc:aggregate goal
+
+* Tue May 25 2010 Guido Grazioli <guido.grazioli@gmail.com> - 2.0-0.659858svn.3
+- Fix build requires
+
+* Mon May 10 2010 Guido Grazioli <guido.grazioli@gmail.com> - 2.0-0.659858svn.2
+- Fix release tag
+- Better macro usage
+
+* Mon Apr 26 2010 Guido Grazioli <guido.grazioli@gmail.com> - 2.0-0.659858svn.1
+- Install maven-release-parent pom in dedicated package
+- Patch maven-release-plugin to skip helpmojo goal
+- Patch to skip tests depending on (unpackaged) jmock
+
+* Fri Apr 16 2010 Guido Grazioli <guido.grazioli@gmail.com> - 2.0-0.659858svn
+- Initial packaging

@@ -21,6 +21,7 @@ BuildRequires:  maven-source-plugin
 BuildRequires:  maven-plugin-plugin
 BuildRequires:  maven-site-plugin
 BuildRequires:  maven-plugin-testing-harness
+BuildRequires:	modello
 BuildRequires:  plexus-containers-component-metadata
 BuildRequires:  plexus-utils
 BuildRequires:  maven-surefire-maven-plugin

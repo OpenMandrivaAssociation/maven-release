@@ -1,7 +1,7 @@
 %{?_javapackages_macros:%_javapackages_macros}
 Name:           maven-release
 Version:        2.2.2
-Release:        1
+Release:        2
 Summary:        Release a project updating the POM and tagging in the SCM
 License:        ASL 2.0
 URL:            http://maven.apache.org/plugins/maven-release-plugin/

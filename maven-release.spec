@@ -1,7 +1,7 @@
 %{?_javapackages_macros:%_javapackages_macros}
 Name:           maven-release
 Version:        2.2.2
-Release:        4
+Release:        5
 Summary:        Release a project updating the POM and tagging in the SCM
 Group:		Development/Java
 License:        ASL 2.0

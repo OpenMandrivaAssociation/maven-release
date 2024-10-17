@@ -5,7 +5,7 @@ Release:        5
 Summary:        Release a project updating the POM and tagging in the SCM
 Group:		Development/Java
 License:        ASL 2.0
-URL:            http://maven.apache.org/plugins/maven-release-plugin/
+URL:            https://maven.apache.org/plugins/maven-release-plugin/
 Source0:        http://repo1.maven.org/maven2/org/apache/maven/release/%{name}/%{version}/%{name}-%{version}-source-release.zip
 # Remove deps needed for tests, till jmock gets packaged
 Patch1:         002-mavenrelease-fixbuild.patch
